@@ -233,6 +233,40 @@ The threshold of 0.015 ensures results are at least moderately relevant in at le
 | Tool-based responses | Billing agent relies on structured tool outputs |
 | Explicit uncertainty | Agents admit when documentation does not cover a topic |
 | Restrictive prompts | System prompts forbid inventing information |
+| Query translation | Tool parameters instruct the LLM to translate queries to English before searching (see [Multilingual Support](#multilingual-support)) |
+| Low temperature | LLM temperature set to 0.3 for deterministic responses (see [Multilingual Support](#multilingual-support)) |
+
+### Multilingual Support
+
+The system supports multilingual user interactions (tested with English, Italian, and Polish) while maintaining all documentation in English.
+
+**Query Translation for RAG:**
+
+Since the documentation is in English, tool parameters explicitly instruct the LLM to translate user queries before searching:
+
+```java
+// From DocumentRetrievalTool.java
+queryProp.put("description",
+    "The search query to find relevant documentation sections. " +
+    "MUST be in English for best results. Translate user queries to English before searching.");
+```
+
+This ensures that:
+- Italian query "errore di connessione" becomes "connection error" for RAG search
+- Polish query "jak zainstalować" becomes "how to install" for RAG search
+- The agent responds in the user's language while searching in English
+
+**Low Temperature for Consistency:**
+
+The LLM is configured with a low temperature (0.3) to ensure:
+- More deterministic and consistent responses
+- Reduced language switching (agents stay in user's language)
+- More faithful adherence to system prompts
+
+```java
+// From GeminiClient.java
+.temperature(0.3f)
+```
 
 ---
 
