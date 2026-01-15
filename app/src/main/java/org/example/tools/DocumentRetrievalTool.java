@@ -64,7 +64,8 @@ public class DocumentRetrievalTool implements Tool {
         Map<String, Object> properties = new HashMap<>();
         Map<String, Object> queryProp = new HashMap<>();
         queryProp.put("type", "string");
-        queryProp.put("description", "The search query to find relevant documentation sections");
+        queryProp.put("description",
+                "The search query to find relevant documentation sections. MUST be in English for best results. Translate user queries to English before searching.");
         properties.put("query", queryProp);
 
         schema.put("properties", properties);

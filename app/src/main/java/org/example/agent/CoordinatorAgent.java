@@ -35,14 +35,13 @@ public class CoordinatorAgent implements Agent {
             relates to the same topic, keep it with the same specialist.
             """;
 
-    private static final String UNKNOWN_RESPONSE = """
-            I appreciate your question, but it falls outside the scope of our support services.
+    private static final String UNKNOWN_PROMPT = """
+            The user's question falls outside the scope of our support services.
+            Politely explain that you can only help with:
+            - Technical questions (product features, troubleshooting, integrations, API usage)
+            - Billing inquiries (refunds, payments, subscriptions, pricing, invoices)
 
-            I can help you with:
-            • **Technical questions** - Product features, troubleshooting, integrations, API usage
-            • **Billing inquiries** - Refunds, payments, subscriptions, pricing, invoices
-
-            Is there anything related to these areas I can help you with today?
+            Ask if there's anything related to these areas you can help with.
             """;
 
     private final LLMClient llmClient;
@@ -80,16 +79,9 @@ public class CoordinatorAgent implements Agent {
                 respondingAgent = "BILLING";
             }
             default -> {
-                // For unknown intent, we could use an LLM here to generate a localized
-                // response,
-                // but for now we keep the static response or could ideally ask the LLM to
-                // apologize in the user's language.
-                // Given the instruction to remove translation logic, we pass the static
-                // response.
-                // A better approach for "Unknown" in a multilingual system would be to let a
-                // generalist agent handle it.
-                // However, sticking to the existing pattern:
-                response = UNKNOWN_RESPONSE;
+                // Use LLM to generate response in user's language
+                response = llmClient.chat(UNKNOWN_PROMPT,
+                        List.of(ConversationMessage.user(userMessage)));
                 respondingAgent = "COORDINATOR";
             }
         }

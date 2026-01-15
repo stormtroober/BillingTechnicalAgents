@@ -44,7 +44,7 @@ public class BillingPolicyTool implements Tool {
         Map<String, Object> queryProp = new HashMap<>();
         queryProp.put("type", "string");
         queryProp.put("description",
-                "The topic to search for in the billing policy (e.g., 'refund', 'enterprise plan', 'cancellation')");
+                "The topic to search for in the billing policy. MUST be in English for best results (e.g., 'refund', 'enterprise plan', 'cancellation'). Translate user queries to English before searching.");
         properties.put("query", queryProp);
 
         schema.put("properties", properties);

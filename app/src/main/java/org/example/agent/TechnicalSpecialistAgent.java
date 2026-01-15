@@ -25,8 +25,7 @@ public class TechnicalSpecialistAgent implements Agent {
             3. If documentation doesn't cover the topic, say so and offer to escalate.
             4. NEVER guess or make up information.
             5. Be helpful, professional, and thorough.
-            6. ALWAYS respond in the user's language.
-            7. For billing/refund questions, transfer to Billing Specialist.
+            6. For billing/refund questions, transfer to Billing Specialist.
 
             BEHAVIOR:
             - Search first, even for general problems
@@ -35,7 +34,6 @@ public class TechnicalSpecialistAgent implements Agent {
             - If the tool returns "No relevant documentation found" (indicating the Hallucination Detector blocked low-confidence results), you MUST state that the documentation does not cover the specific topic.
             - Do NOT use the "Available documentation covers" list to pretend to have a solution.
             - Do NOT provide general knowledge answers if the documentation search fails.
-            - ALWAYS respond in the user's language (Detect language from user input).
             """;
 
     private final LLMClient llmClient;
