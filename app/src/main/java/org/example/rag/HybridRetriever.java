@@ -16,7 +16,6 @@ public class HybridRetriever {
     private final VectorStore vectorStore;
     private final EmbeddingService embeddingService;
     private final RRFMerger rrfMerger;
-    private final Reranker reranker;
 
     private boolean initialized = false;
 
@@ -35,7 +34,6 @@ public class HybridRetriever {
         this.vectorStore = new VectorStore();
         this.embeddingService = new EmbeddingService();
         this.rrfMerger = new RRFMerger();
-        this.reranker = new Reranker();
     }
 
     /**
@@ -137,13 +135,15 @@ public class HybridRetriever {
         // System.out.println("[HybridRetriever] RRF Fusion produced " + merged.size() +
         // " candidates");
 
-        // 4. Rerank
-        List<ScoredChunk> reranked = reranker.rerank(query, merged, Math.min(topK, FINAL_TOP_K));
+        // 4. Final Crop
+        List<ScoredChunk> finalResults = merged.stream()
+                .limit(Math.min(topK, FINAL_TOP_K))
+                .toList();
 
-        // System.out.println("[HybridRetriever] Final Top " + reranked.size() + "
+        // System.out.println("[HybridRetriever] Final Top " + finalResults.size() + "
         // results:");
-        // for (int i = 0; i < reranked.size(); i++) {
-        // ScoredChunk c = reranked.get(i);
+        // for (int i = 0; i < finalResults.size(); i++) {
+        // ScoredChunk c = finalResults.get(i);
         // String snippet = c.content().length() > 100 ? c.content().substring(0,
         // 100).replace("\n", " ") + "..."
         // : c.content().replace("\n", " ");
@@ -152,8 +152,8 @@ public class HybridRetriever {
         // + ") " + snippet);
         // }
 
-        retrievalCache.put(cacheKey, reranked);
-        return reranked;
+        retrievalCache.put(cacheKey, finalResults);
+        return finalResults;
     }
 
     /**
