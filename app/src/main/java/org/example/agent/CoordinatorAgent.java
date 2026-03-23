@@ -3,6 +3,7 @@ package org.example.agent;
 import org.example.llm.LLMClient;
 import org.example.model.ConversationContext;
 import org.example.model.ConversationMessage;
+import org.example.rag.HybridRetriever;
 
 import java.util.List;
 
@@ -47,11 +48,13 @@ public class CoordinatorAgent implements Agent {
     private final LLMClient llmClient;
     private final Agent technicalAgent;
     private final Agent billingAgent;
+    private final HybridRetriever retriever;
 
-    public CoordinatorAgent(LLMClient llmClient) {
+    public CoordinatorAgent(LLMClient llmClient, HybridRetriever retriever) {
         this.llmClient = llmClient;
-        this.technicalAgent = new TechnicalSpecialistAgent(llmClient);
-        this.billingAgent = new BillingSpecialistAgent(llmClient);
+        this.retriever = retriever;
+        this.technicalAgent = new TechnicalSpecialistAgent(llmClient, retriever);
+        this.billingAgent = new BillingSpecialistAgent(llmClient, retriever);
     }
 
     @Override
@@ -59,6 +62,10 @@ public class CoordinatorAgent implements Agent {
         // Direct routing without translation - allowing the agents to handle
         // multilingual input naturally
         AgentType targetAgent = routeMessage(userMessage, context);
+
+        // Update context with the new interaction BEFORE delegating to agents
+        // so any tool calls they push to context fall AFTER this user message
+        context.addMessage(ConversationMessage.user(userMessage));
 
         String response;
         String respondingAgent;
@@ -87,8 +94,6 @@ public class CoordinatorAgent implements Agent {
             }
         }
 
-        // Update context with the interaction
-        context.addMessage(ConversationMessage.user(userMessage));
         context.addMessage(ConversationMessage.assistant(response, respondingAgent));
         context.setCurrentAgentType(respondingAgent);
 

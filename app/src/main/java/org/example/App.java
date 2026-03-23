@@ -7,6 +7,7 @@ import org.example.agent.CoordinatorAgent;
 import org.example.llm.GeminiClient;
 import org.example.llm.LLMClient;
 import org.example.model.ConversationContext;
+import org.example.rag.HybridRetriever;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -60,7 +61,13 @@ public class App {
 
         // Initialize components
         LLMClient llmClient = new GeminiClient(apiKey);
-        CoordinatorAgent coordinator = new CoordinatorAgent(llmClient);
+        
+        System.out.println("Initializing AI Knowledge Base (Retriever)...");
+        HybridRetriever retriever = new HybridRetriever();
+        retriever.initialize();
+        Runtime.getRuntime().addShutdownHook(new Thread(retriever::close));
+        
+        CoordinatorAgent coordinator = new CoordinatorAgent(llmClient, retriever);
         ConversationContext context = new ConversationContext();
 
         System.out.println(WELCOME_MESSAGE);

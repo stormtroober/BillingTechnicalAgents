@@ -73,6 +73,7 @@ public class MultiAgentSystemTest {
             "pl", "../TEST_SET_PL.md");
 
     private LLMClient llmClient;
+    private org.example.rag.HybridRetriever retriever;
     private CoordinatorAgent agent;
     private Map<String, List<TestCase>> testCasesByLanguage;
 
@@ -95,7 +96,9 @@ public class MultiAgentSystemTest {
         }
 
         llmClient = new GeminiClient(apiKey);
-        agent = new CoordinatorAgent(llmClient);
+        retriever = new org.example.rag.HybridRetriever();
+        retriever.initialize();
+        agent = new CoordinatorAgent(llmClient, retriever);
 
         // Load all test sets
         testCasesByLanguage = new HashMap<>();
@@ -114,7 +117,9 @@ public class MultiAgentSystemTest {
 
     @org.junit.jupiter.api.AfterAll
     public void teardown() {
-        org.example.tools.DocumentRetrievalTool.shutdown();
+        if (retriever != null) {
+            retriever.close();
+        }
     }
 
     /**

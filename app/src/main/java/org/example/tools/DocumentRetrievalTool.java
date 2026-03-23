@@ -14,7 +14,7 @@ import java.util.*;
  */
 public class DocumentRetrievalTool implements Tool {
 
-    private static final HybridRetriever retriever = new HybridRetriever();
+    private final HybridRetriever retriever;
 
     /**
      * Minimum confidence score for a result to be considered reliable.
@@ -25,12 +25,10 @@ public class DocumentRetrievalTool implements Tool {
 
     /**
      * Shutdown the static retriever instance.
-     * Should be called when application/tests are shutting down.
+     * Deprecated: Lifecycle is now managed in App.java.
      */
     public static void shutdown() {
-        if (retriever != null) {
-            retriever.close();
-        }
+        // Handled by App.java shutdown hook now
     }
 
     // Document-friendly names for better output
@@ -42,8 +40,8 @@ public class DocumentRetrievalTool implements Tool {
             "installation.md", "Installation Guide",
             "billing_policy.md", "Billing Policy");
 
-    public DocumentRetrievalTool() {
-        // Lazy initialization - retriever initializes on first use
+    public DocumentRetrievalTool(HybridRetriever retriever) {
+        this.retriever = retriever;
     }
 
     @Override

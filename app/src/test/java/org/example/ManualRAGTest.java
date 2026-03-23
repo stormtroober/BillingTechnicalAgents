@@ -29,7 +29,9 @@ public class ManualRAGTest {
 
         System.out.println(">>> STARTING MANUAL RAG TEST <<<\n");
 
-        DocumentRetrievalTool tool = new DocumentRetrievalTool();
+        org.example.rag.HybridRetriever retriever = new org.example.rag.HybridRetriever();
+        retriever.initialize();
+        DocumentRetrievalTool tool = new DocumentRetrievalTool(retriever);
 
         // Query that should trigger results
         String query = "authentication error 401";

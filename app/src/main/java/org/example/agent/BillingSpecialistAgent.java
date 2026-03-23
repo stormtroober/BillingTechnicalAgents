@@ -5,6 +5,7 @@ import org.example.llm.LLMResponse;
 import org.example.model.ConversationContext;
 import org.example.model.ConversationMessage;
 import org.example.tools.*;
+import org.example.rag.HybridRetriever;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,19 +40,20 @@ public class BillingSpecialistAgent implements Agent {
 
   private final LLMClient llmClient;
   private final List<Tool> tools;
+  private final HybridRetriever retriever;
 
-  public BillingSpecialistAgent(LLMClient llmClient) {
+  public BillingSpecialistAgent(LLMClient llmClient, HybridRetriever retriever) {
     this.llmClient = llmClient;
+    this.retriever = retriever;
     this.tools = List.of(
         new OpenRefundCaseTool(),
         new RefundTimelineTool(),
-        new BillingPolicyTool());
+        new BillingPolicyTool(retriever));
   }
 
   @Override
   public String process(String userMessage, ConversationContext context) {
     List<ConversationMessage> messages = new ArrayList<>(context.getMessages());
-    messages.add(ConversationMessage.user(userMessage));
 
     // First call - may result in tool calls
     LLMResponse response = llmClient.chatWithTools(SYSTEM_PROMPT, messages, tools);
@@ -59,20 +61,23 @@ public class BillingSpecialistAgent implements Agent {
     // Handle tool calls (possibly multiple)
     int maxIterations = 3;
     while (response.hasToolCalls() && maxIterations-- > 0) {
-      StringBuilder toolResults = new StringBuilder();
       for (LLMResponse.ToolCall toolCall : response.toolCalls()) {
+        ConversationMessage callMsg = ConversationMessage.toolCall(toolCall.name(), toolCall.arguments(), "BILLING");
+        messages.add(callMsg);
+        context.addMessage(callMsg);
+
+        String result = "Error: Tool execution failed or tool not found.";
         for (Tool tool : tools) {
           if (tool.getName().equals(toolCall.name())) {
-            String result = tool.execute(toolCall.arguments());
-            toolResults.append("Tool '").append(toolCall.name()).append("' result:\n");
-            toolResults.append(result).append("\n\n");
+            result = tool.execute(toolCall.arguments());
+            break;
           }
         }
-      }
 
-      // Add tool results and continue
-      messages.add(ConversationMessage.assistant("Processing your request...", "BILLING"));
-      messages.add(ConversationMessage.user("Tool results:\n" + toolResults));
+        ConversationMessage resultMsg = ConversationMessage.toolResult(toolCall.name(), result);
+        messages.add(resultMsg);
+        context.addMessage(resultMsg);
+      }
 
       response = llmClient.chatWithTools(SYSTEM_PROMPT, messages, tools);
     }

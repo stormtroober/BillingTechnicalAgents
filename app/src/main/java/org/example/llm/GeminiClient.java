@@ -50,10 +50,45 @@ public class GeminiClient implements LLMClient {
         try {
             // Build conversation history
             List<Content> history = messages.stream()
-                    .map(msg -> Content.builder()
-                            .role(msg.role().equals("assistant") ? "model" : "user")
-                            .parts(List.of(Part.builder().text(msg.content()).build()))
-                            .build())
+                    .map(msg -> {
+                        switch (msg.role()) {
+                            case "tool_call":
+                                Map<String, Object> mappedArgs = new HashMap<>();
+                                if (msg.toolArguments() != null) {
+                                    mappedArgs.putAll(msg.toolArguments());
+                                }
+                                return Content.builder()
+                                        .role("model")
+                                        .parts(List.of(Part.builder()
+                                                .functionCall(FunctionCall.builder()
+                                                        .name(msg.toolName())
+                                                        .args(mappedArgs)
+                                                        .build())
+                                                .build()))
+                                        .build();
+                            case "tool_result":
+                                return Content.builder()
+                                        .role("user")
+                                        .parts(List.of(Part.builder()
+                                                .functionResponse(FunctionResponse.builder()
+                                                        .name(msg.toolName())
+                                                        .response(Map.of("output", msg.content()))
+                                                        .build())
+                                                .build()))
+                                        .build();
+                            case "assistant":
+                                return Content.builder()
+                                        .role("model")
+                                        .parts(List.of(Part.builder().text(msg.content() == null ? "" : msg.content()).build()))
+                                        .build();
+                            case "user":
+                            default:
+                                return Content.builder()
+                                        .role("user")
+                                        .parts(List.of(Part.builder().text(msg.content() == null ? "" : msg.content()).build()))
+                                        .build();
+                        }
+                    })
                     .collect(Collectors.toList());
 
             // Configure tools

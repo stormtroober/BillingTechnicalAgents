@@ -6,6 +6,7 @@ import org.example.model.ConversationContext;
 import org.example.model.ConversationMessage;
 import org.example.tools.DocumentRetrievalTool;
 import org.example.tools.Tool;
+import org.example.rag.HybridRetriever;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,38 +40,43 @@ public class TechnicalSpecialistAgent implements Agent {
 
     private final LLMClient llmClient;
     private final List<Tool> tools;
+    private final HybridRetriever retriever;
 
-    public TechnicalSpecialistAgent(LLMClient llmClient) {
+    public TechnicalSpecialistAgent(LLMClient llmClient, HybridRetriever retriever) {
         this.llmClient = llmClient;
-        this.tools = List.of(new DocumentRetrievalTool());
+        this.retriever = retriever;
+        this.tools = List.of(new DocumentRetrievalTool(retriever));
     }
 
     @Override
     public String process(String userMessage, ConversationContext context) {
         List<ConversationMessage> messages = new ArrayList<>(context.getMessages());
-        messages.add(ConversationMessage.user(userMessage));
 
         // First call - may result in tool call
         LLMResponse response = llmClient.chatWithTools(SYSTEM_PROMPT, messages, tools);
 
         // Handle tool calls
-        if (response.hasToolCalls()) {
-            StringBuilder toolResults = new StringBuilder();
+        int maxIterations = 3;
+        while (response.hasToolCalls() && maxIterations-- > 0) {
             for (LLMResponse.ToolCall toolCall : response.toolCalls()) {
+                ConversationMessage callMsg = ConversationMessage.toolCall(toolCall.name(), toolCall.arguments(), "TECHNICAL");
+                messages.add(callMsg);
+                context.addMessage(callMsg);
+                
+                String result = "Error: Tool execution failed or tool not found.";
                 for (Tool tool : tools) {
                     if (tool.getName().equals(toolCall.name())) {
-                        String result = tool.execute(toolCall.arguments());
-                        toolResults.append("Tool '").append(toolCall.name()).append("' result:\n");
-                        toolResults.append(result).append("\n\n");
+                        result = tool.execute(toolCall.arguments());
+                        break;
                     }
                 }
+                
+                ConversationMessage resultMsg = ConversationMessage.toolResult(toolCall.name(), result);
+                messages.add(resultMsg);
+                context.addMessage(resultMsg);
             }
 
-            // Add tool results and get final response
-            messages.add(ConversationMessage.assistant("I'm searching the documentation...", "TECHNICAL"));
-            messages.add(ConversationMessage.user("Tool results:\n" + toolResults));
-
-            response = llmClient.chatWithTools(SYSTEM_PROMPT, messages, List.of());
+            response = llmClient.chatWithTools(SYSTEM_PROMPT, messages, tools);
         }
 
         return response.text();

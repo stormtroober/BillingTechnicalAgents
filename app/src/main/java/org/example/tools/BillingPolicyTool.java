@@ -11,11 +11,11 @@ import java.util.*;
  */
 public class BillingPolicyTool implements Tool {
 
-    private static final HybridRetriever retriever = new HybridRetriever();
+    private final HybridRetriever retriever;
     private static final String SOURCE_FILTER = "billing_policy.md";
 
-    public BillingPolicyTool() {
-        // Lazy initialization - retriever initializes on first use
+    public BillingPolicyTool(HybridRetriever retriever) {
+        this.retriever = retriever;
     }
 
     @Override
