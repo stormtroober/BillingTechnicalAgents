@@ -11,6 +11,11 @@ import java.util.List;
  * Coordinator agent that routes messages to appropriate specialist agents.
  */
 public class CoordinatorAgent implements Agent {
+    private static final int ROUTING_CONTEXT_MESSAGE_COUNT = 4;
+    private static final String AGENT_NAME_TECHNICAL = "TECHNICAL";
+    private static final String AGENT_NAME_BILLING = "BILLING";
+    private static final String AGENT_NAME_COORDINATOR = "COORDINATOR";
+
     private static final String ROUTING_PROMPT = """
             You are a support routing coordinator. Your job is to analyze each customer message
             and determine which specialist should handle it.
@@ -72,17 +77,17 @@ public class CoordinatorAgent implements Agent {
         switch (targetAgent) {
             case TECHNICAL -> {
                 response = technicalAgent.process(userMessage, context);
-                respondingAgent = "TECHNICAL";
+                respondingAgent = AGENT_NAME_TECHNICAL;
             }
             case BILLING -> {
                 response = billingAgent.process(userMessage, context);
-                respondingAgent = "BILLING";
+                respondingAgent = AGENT_NAME_BILLING;
             }
             default -> {
                 // Use LLM to generate response in user's language
                 response = llmClient.chat(UNKNOWN_PROMPT,
                         List.of(ConversationMessage.user(userMessage)));
-                respondingAgent = "COORDINATOR";
+                respondingAgent = AGENT_NAME_COORDINATOR;
             }
         }
 
@@ -97,7 +102,7 @@ public class CoordinatorAgent implements Agent {
         StringBuilder routingContext = new StringBuilder();
 
         // Include recent conversation history for context
-        List<ConversationMessage> recentMessages = context.getRecentMessages(4);
+        List<ConversationMessage> recentMessages = context.getRecentMessages(ROUTING_CONTEXT_MESSAGE_COUNT);
         if (!recentMessages.isEmpty()) {
             routingContext.append("Recent conversation:\n");
             for (ConversationMessage msg : recentMessages) {
@@ -125,8 +130,8 @@ public class CoordinatorAgent implements Agent {
 
     private String formatResponse(String response, String agentType) {
         String agentLabel = switch (agentType) {
-            case "TECHNICAL" -> "🔧 Technical Specialist";
-            case "BILLING" -> "💳 Billing Specialist";
+            case AGENT_NAME_TECHNICAL -> "🔧 Technical Specialist";
+            case AGENT_NAME_BILLING -> "💳 Billing Specialist";
             default -> "🤖 Support";
         };
 
