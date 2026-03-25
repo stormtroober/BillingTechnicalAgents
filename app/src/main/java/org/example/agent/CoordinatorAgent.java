@@ -63,7 +63,7 @@ public class CoordinatorAgent implements Agent {
 
     @Override
     public String process(String userMessage, ConversationContext context) {
-        // Direct routing without translation - allowing the agents to handle
+        // Direct routing without translation, allowing the agents to handle
         // multilingual input naturally
         AgentType targetAgent = routeMessage(userMessage, context);
 

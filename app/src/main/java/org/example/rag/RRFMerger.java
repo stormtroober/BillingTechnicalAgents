@@ -10,9 +10,6 @@ import java.util.*;
  * where k is a constant (default 60) and rank_i is the rank of document d in
  * list i.
  * 
- * Reference: Cormack et al. "Reciprocal Rank Fusion outperforms Condorcet and
- * individual
- * Rank Learning Methods" (SIGIR 2009)
  */
 public class RRFMerger {
 
