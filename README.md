@@ -93,8 +93,7 @@ agentscodingchallenge/
 │   │   ├── BM25Index.java          # Lucene-based lexical search
 │   │   ├── VectorStore.java        # Semantic vector search
 │   │   ├── EmbeddingService.java   # DJL embedding service
-│   │   ├── RRFMerger.java          # Reciprocal Rank Fusion
-│   │   └── Reranker.java           # Final reranking
+│   │   └── RRFMerger.java          # Reciprocal Rank Fusion + score-based top-K crop
 │   └── tools/
 │       ├── Tool.java               # Tool interface
 │       ├── OpenRefundCaseTool.java
@@ -153,11 +152,11 @@ The system implements a **Hybrid Retrieval-Augmented Generation** pipeline that 
 │                              │   (k=60)     │                      │
 │                              └──────┬───────┘                      │
 │                                     │                              │
-│                                     v                              │
+│                                     │                              │
 │                            ┌──────────────┐                        │
-│                            │   Reranker   │                        │
+│                            │  Top-K Crop  │                        │
 │                            │              │                        │
-│                            │ Final top-K  │                        │
+│                            │ Score-based  │                        │
 │                            │  selection   │                        │
 │                            └──────────────┘                        │
 │                                                                     │
@@ -172,16 +171,15 @@ The system implements a **Hybrid Retrieval-Augmented Generation** pipeline that 
 | **BM25Index** | Apache Lucene | Lexical search using BM25 ranking algorithm for keyword matching |
 | **VectorStore** | In-memory + DJL | Semantic search using dense embeddings with cosine similarity |
 | **EmbeddingService** | DJL (Deep Java Library) | Generates embeddings using `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` model |
-| **RRFMerger** | Custom | Reciprocal Rank Fusion to combine BM25 and vector search results |
-| **Reranker** | Custom | Final reranking and top-K selection |
+| **RRFMerger** | Custom | Reciprocal Rank Fusion to combine BM25 and vector search results, followed by score-based top-K crop |
 
 ### Retrieval Flow
 
 1. **Query Processing**: User query is passed to both BM25 and Vector search
 2. **BM25 Search**: Returns top 50 lexically matching chunks
 3. **Vector Search**: Returns top 50 semantically similar chunks
-4. **RRF Fusion**: Merges both lists using Reciprocal Rank Fusion (k=60)
-5. **Reranking**: Final selection of top 5 most relevant chunks
+4. **RRF Fusion**: Merges both lists using Reciprocal Rank Fusion (k=60), producing up to 20 fused candidates
+5. **Top-K Crop**: Final selection of top 5 results by RRF score
 6. **Context Injection**: Retrieved chunks are injected into agent prompt
 
 ### Configuration
@@ -190,8 +188,8 @@ The system implements a **Hybrid Retrieval-Augmented Generation** pipeline that 
 |-----------|-------|-------------|
 | BM25_TOP_K | 50 | Initial BM25 candidates |
 | VECTOR_TOP_K | 50 | Initial vector search candidates |
-| RRF_TOP_K | 20 | After fusion |
-| FINAL_TOP_K | 5 | Final results to agent |
+| RRF_TOP_K | 20 | Candidates after RRF fusion |
+| FINAL_TOP_K | 5 | Final results to agent (top-K crop by RRF score) |
 | MAX_CHUNK_SIZE | 1000 chars | Maximum chunk size |
 | OVERLAP_SIZE | 100 chars | Overlap between chunks |
 
