@@ -1,6 +1,8 @@
 package org.example.rag;
 
 import java.util.*;
+import java.util.Set;
+import jakarta.persistence.EntityManagerFactory;
 
 /**
  * Hybrid retriever that orchestrates the full RAG pipeline:
@@ -28,10 +30,10 @@ public class HybridRetriever {
     /**
      * Create a new hybrid retriever with all components.
      */
-    public HybridRetriever() {
+    public HybridRetriever(EntityManagerFactory emf) {
         this.chunker = new DocumentChunker();
         this.bm25Index = new BM25Index();
-        this.vectorStore = new VectorStore();
+        this.vectorStore = new VectorStore(emf);
         this.embeddingService = new EmbeddingService();
         this.rrfMerger = new RRFMerger();
     }
@@ -55,14 +57,26 @@ public class HybridRetriever {
         // System.out.println("[HybridRetriever] BM25 index: " +
         // bm25Index.getDocumentCount() + " docs");
 
-        // Create embeddings and add to vector store
-        embeddingService.initialize();
-        for (Chunk chunk : chunks) {
-            float[] embedding = embeddingService.embed(chunk.content(), false);
-            vectorStore.addChunk(chunk, embedding);
+        // Create embeddings only for chunks NOT already in the vector DB
+        Set<String> existingIds = vectorStore.getExistingIds();
+        int skipped = 0;
+        int indexed = 0;
+
+        List<Chunk> newChunks = chunks.stream()
+                .filter(c -> !existingIds.contains(c.id()))
+                .toList();
+
+        if (!newChunks.isEmpty()) {
+            embeddingService.initialize();
+            for (Chunk chunk : newChunks) {
+                float[] embedding = embeddingService.embed(chunk.content(), false);
+                vectorStore.addChunk(chunk, embedding);
+                indexed++;
+            }
         }
-        // System.out.println("[HybridRetriever] Vector store: " + vectorStore.size() +
-        // " vectors");
+        skipped = chunks.size() - indexed;
+
+        System.out.println("[RAG] " + indexed + " new chunks indexed, " + skipped + " already in DB (skipped embedding).");
 
         initialized = true;
         // long duration = System.currentTimeMillis() - startTime;
