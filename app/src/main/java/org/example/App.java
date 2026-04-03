@@ -11,7 +11,11 @@ import org.example.rag.HybridRetriever;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.Persistence;
+
+import java.sql.DriverManager;
+import java.sql.Connection;
 
 import java.util.Scanner;
 import java.util.Map;
@@ -66,10 +70,6 @@ public class App {
         // Initialize components
         LLMClient llmClient = new GeminiClient(apiKey);
         
-        System.out.println("Initializing AI Knowledge Base (Retriever)...");
-        HybridRetriever retriever = new HybridRetriever();
-        retriever.initialize();
-        Runtime.getRuntime().addShutdownHook(new Thread(retriever::close));
         
         System.out.println("Initializing Database (JPA)...");
         
@@ -82,12 +82,28 @@ public class App {
         jpaProperties.put("hibernate.connection.username", dbUser);
         jpaProperties.put("hibernate.connection.password", dbPass);
         
+        // Install pgvector extension FIRST, via raw JDBC, before Hibernate creates DDL
+        String jdbcUrl = "jdbc:postgresql://localhost:5432/" + dbName;
+        try (Connection conn = DriverManager.getConnection(jdbcUrl, dbUser, dbPass)) {
+            conn.createStatement().execute("CREATE EXTENSION IF NOT EXISTS vector");
+            System.out.println("pgvector extension ready.");
+        } catch (Exception e) {
+            System.err.println("Warning: could not install pgvector: " + e.getMessage());
+        }
+        
+        // Now create the EntityManagerFactory (triggers DDL - vector type is now available)
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("SupportSystemPU", jpaProperties);
+        
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             if (emf != null && emf.isOpen()) {
                 emf.close();
             }
         }));
+
+        System.out.println("Initializing AI Knowledge Base (Retriever)...");
+        HybridRetriever retriever = new HybridRetriever(emf);
+        retriever.initialize();
+        Runtime.getRuntime().addShutdownHook(new Thread(retriever::close));
 
         CoordinatorAgent coordinator = new CoordinatorAgent(llmClient, retriever, emf);
         ConversationContext context = new ConversationContext(emf);
