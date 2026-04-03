@@ -46,6 +46,11 @@ dependencies {
     
     // Logging
     implementation("org.slf4j:slf4j-simple:2.0.9")
+
+    // JPA / Hibernate
+    implementation("org.hibernate.orm:hibernate-core:6.4.4.Final")
+    implementation("com.h2database:h2:2.2.224")
+    implementation("org.postgresql:postgresql:42.7.3")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

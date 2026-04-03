@@ -10,8 +10,12 @@ import org.example.model.ConversationContext;
 import org.example.rag.HybridRetriever;
 
 import io.github.cdimascio.dotenv.Dotenv;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.Persistence;
 
 import java.util.Scanner;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * Main application entry point for the multi-agent support system.
@@ -67,8 +71,26 @@ public class App {
         retriever.initialize();
         Runtime.getRuntime().addShutdownHook(new Thread(retriever::close));
         
-        CoordinatorAgent coordinator = new CoordinatorAgent(llmClient, retriever);
-        ConversationContext context = new ConversationContext();
+        System.out.println("Initializing Database (JPA)...");
+        
+        String dbUser = dotenv.get("POSTGRES_USER", "postgres");
+        String dbPass = dotenv.get("POSTGRES_PASSWORD", "postgres");
+        String dbName = dotenv.get("POSTGRES_DB", "postgres");
+        
+        Map<String, String> jpaProperties = new HashMap<>();
+        jpaProperties.put("hibernate.connection.url", "jdbc:postgresql://localhost:5432/" + dbName);
+        jpaProperties.put("hibernate.connection.username", dbUser);
+        jpaProperties.put("hibernate.connection.password", dbPass);
+        
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("SupportSystemPU", jpaProperties);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            if (emf != null && emf.isOpen()) {
+                emf.close();
+            }
+        }));
+
+        CoordinatorAgent coordinator = new CoordinatorAgent(llmClient, retriever, emf);
+        ConversationContext context = new ConversationContext(emf);
 
         System.out.println(WELCOME_MESSAGE);
 

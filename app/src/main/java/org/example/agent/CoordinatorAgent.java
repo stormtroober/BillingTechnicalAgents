@@ -4,6 +4,7 @@ import org.example.llm.LLMClient;
 import org.example.model.ConversationContext;
 import org.example.model.ConversationMessage;
 import org.example.rag.HybridRetriever;
+import jakarta.persistence.EntityManagerFactory;
 
 import java.util.List;
 
@@ -53,12 +54,14 @@ public class CoordinatorAgent implements Agent {
     private final Agent technicalAgent;
     private final Agent billingAgent;
     private final HybridRetriever retriever;
+    private final EntityManagerFactory emf;
 
-    public CoordinatorAgent(LLMClient llmClient, HybridRetriever retriever) {
+    public CoordinatorAgent(LLMClient llmClient, HybridRetriever retriever, EntityManagerFactory emf) {
         this.llmClient = llmClient;
         this.retriever = retriever;
+        this.emf = emf;
         this.technicalAgent = new TechnicalSpecialistAgent(llmClient, retriever);
-        this.billingAgent = new BillingSpecialistAgent(llmClient, retriever);
+        this.billingAgent = new BillingSpecialistAgent(llmClient, retriever, emf);
     }
 
     @Override

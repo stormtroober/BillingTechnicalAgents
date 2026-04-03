@@ -6,6 +6,7 @@ import org.example.model.ConversationContext;
 import org.example.model.ConversationMessage;
 import org.example.tools.*;
 import org.example.rag.HybridRetriever;
+import jakarta.persistence.EntityManagerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,12 +42,14 @@ public class BillingSpecialistAgent implements Agent {
   private final LLMClient llmClient;
   private final List<Tool> tools;
   private final HybridRetriever retriever;
+  private final EntityManagerFactory emf;
 
-  public BillingSpecialistAgent(LLMClient llmClient, HybridRetriever retriever) {
+  public BillingSpecialistAgent(LLMClient llmClient, HybridRetriever retriever, EntityManagerFactory emf) {
     this.llmClient = llmClient;
     this.retriever = retriever;
+    this.emf = emf;
     this.tools = List.of(
-        new OpenRefundCaseTool(),
+        new OpenRefundCaseTool(emf),
         new RefundTimelineTool(),
         new BillingPolicyTool(retriever));
   }
