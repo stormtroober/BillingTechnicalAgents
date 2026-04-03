@@ -2,11 +2,19 @@ package org.example.tools;
 
 import java.util.*;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import org.example.model.RefundCase;
+
 /**
  * Tool for opening a refund support case.
  */
 public class OpenRefundCaseTool implements Tool {
-    private static int caseCounter = 1000;
+    private final EntityManagerFactory emf;
+
+    public OpenRefundCaseTool(EntityManagerFactory emf) {
+        this.emf = emf;
+    }
 
     @Override
     public String getName() {
@@ -53,7 +61,27 @@ public class OpenRefundCaseTool implements Tool {
             return "Error: Customer ID is required to open a refund case.";
         }
 
-        int caseId = ++caseCounter;
+        Long caseId = null;
+        EntityManager em = null;
+        try {
+            em = emf.createEntityManager();
+            em.getTransaction().begin();
+            
+            RefundCase rc = new RefundCase(customerId, reason != null ? reason : "Not specified", "Pending Customer Action");
+            em.persist(rc);
+            
+            em.getTransaction().commit();
+            caseId = rc.getId();
+        } catch (Exception e) {
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            return "Error: Failed to save the refund case. Underlying error: " + e.getMessage();
+        } finally {
+            if (em != null) {
+                em.close();
+            }
+        }
 
         String formUrl = String.format("https://support.example.org/refund-form?caseId=REF-%d&auth=%s",
                 caseId, UUID.randomUUID().toString().substring(0, 8));
