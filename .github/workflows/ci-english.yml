@@ -2,7 +2,8 @@ name: English Test Suite
 
 on:
   push:
-    branches: [ "main" ]
+    #for now i dont test it anymore otherwise i consume api credits
+    branches: [ "master" ]
     paths-ignore:
       - 'README.md'
   workflow_dispatch:
